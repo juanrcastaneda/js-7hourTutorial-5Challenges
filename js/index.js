@@ -140,4 +140,172 @@ function buttonsRandom() {
         allButtons[i].classList.remove(allButtons[i].classList[1]);
         allButtons[i].classList.add(choices[Math.floor(Math.random()*4)]);
     }
+} 
+
+//Challenge 5
+let blackJackGame = {
+    'you': {'scoreSpan': '#your-blackjack-result', 'div': '#your-box', 'score': 0},
+    'dealer': {'scoreSpan': '#dealer-blackjack-result', 'div': '#dealer-box', 'score': 0},
+    'cards': ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'],
+    'cardsMap': {'2': 2 , '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 10, 'Q': 10, 'K': 10, 'A': [1, 11]},
+    'wins': 0,
+    'losses': 0,
+    'draws': 0,
+    'isStand': false,
+    'turnsOver': false,
+};
+
+const YOU = blackJackGame['you']
+const DEALER = blackJackGame['dealer']
+
+const hitSound = new Audio('../sound/swish.m4a');
+const winSound = new Audio('../sound/cash.mp3');
+const lossSound = new Audio('../sound/aww.mp3');
+
+
+
+document.querySelector('#hit').addEventListener('click', blackjackHit); //better to use than onclick="fucntion(this)" in your html or onchange
+document.querySelector('#deal').addEventListener('click', blackjackDeal);
+document.querySelector('#stand').addEventListener('click', dealerLogic);
+
+function blackjackHit() {
+    if(blackJackGame['isStand'] === false) {
+    let card = randomCard();
+    showCard(card, YOU);
+    updateScore(card, YOU);
+    showScore(YOU);
+    }
+
 }
+
+function randomCard() {
+    let randomIndex = Math.floor(Math.random() * 13);
+    return blackJackGame['cards'][randomIndex]
+}
+
+function showCard(card, activePlayer) {
+    if(activePlayer['score'] <= 21) {
+        let cardImage = document.createElement('img');
+        cardImage.src = `../img/${card}.png`;
+        cardImage.style.width = '80px';
+        cardImage.style.height = '120px';
+        cardImage.style.margin = '10px';
+        document.querySelector(activePlayer['div']).appendChild(cardImage); 
+        hitSound.play();
+    }
+}
+
+function blackjackDeal() {
+    if(blackJackGame['turnsOver'] === true) {
+        blackJackGame['isStand'] = false;
+        let yourImages = document.querySelector('#your-box').querySelectorAll('img');
+        let dealerImages = document.querySelector('#dealer-box').querySelectorAll('img');
+        
+        for(let i = 0; i < yourImages.length; i++) {
+            yourImages[i].remove();
+        }
+        for(let i = 0; i < dealerImages.length; i++) {
+            dealerImages[i].remove();
+        }
+        YOU['score'] = 0;
+        DEALER['score'] = 0;
+        document.querySelector('#your-blackjack-result').textContent = 0;
+        document.querySelector('#dealer-blackjack-result').textContent = 0;
+        document.querySelector('#your-blackjack-result').style.color = '#ffffff';
+        document.querySelector('#dealer-blackjack-result').style.color = '#ffffff';
+        document.querySelector('#blackjack-result').textContent = 'Lets Play';
+        document.querySelector('#blackjack-result').style.color = 'black';
+        blackJackGame['turnsOver'] = true;
+    }
+}
+function updateScore(card, activePlayer) {
+    //if adding 11 keeps me below 21, add 11. Otherwise, add 1.
+    if(card === 'A') {
+        if(activePlayer['score'] + blackJackGame['cardsMap'][card][1] <= 21) {
+            activePlayer['score'] += blackJackGame['cardsMap'][card][1];
+        } else {
+            activePlayer['score'] += blackJackGame['cardsMap'][card][0];
+        }
+    } else {
+        activePlayer['score'] += blackJackGame['cardsMap'][card];
+    }
+}
+
+
+
+function showScore(activePlayer) {
+    if(activePlayer['score'] > 21) {
+        document.querySelector(activePlayer['scoreSpan']).textContent = 'BUST!';
+        document.querySelector(activePlayer['scoreSpan']).style.color = 'red';
+    } else {
+    document.querySelector(activePlayer['scoreSpan']).textContent = activePlayer['score'];
+    }
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms))
+}
+async function dealerLogic() {
+    blackJackGame['isStand'] = true;
+    while(DEALER['score'] < 16 && blackJackGame['isStand'] === true) {
+        let card = randomCard();
+        showCard(card, DEALER);
+        updateScore(card, DEALER);
+        showScore(DEALER);
+        await sleep(1000);
+    }
+
+        blackJackGame['turnsOver'] = true;
+        let winner = computeWinner();
+        showResult(winner);
+}
+
+function computeWinner() {
+    let winner;
+
+    if(YOU['score'] <= 21) {
+        if (YOU['score'] > DEALER['score'] || (DEALER['score'] > 21)) {
+            blackJackGame['wins']++;
+            winner = YOU;
+        } else if (YOU['score'] < DEALER['score']) {
+            blackJackGame['losses']++;
+            winner = DEALER;
+        } else if (YOU['score'] === DEALER['score']) {
+            blackJackGame['draws']++;
+        }      
+    } else if (YOU['score'] > 21 && DEALER['score'] <= 21) {
+            blackJackGame['losses']++;
+            winner = DEALER;
+        } else if (YOU['score'] > 21 && DEALER['score'] > 21) {
+            blackJackGame['draws']++;
+        }
+    console.log("Winner is ", winner);
+    return winner;
+    }
+
+    function showResult(winner) {
+        if(blackJackGame['turnsOver'] === true) {
+
+        
+        let message, messageColor;
+
+        if(winner === YOU) {
+            document.querySelector('#wins').textContent = blackJackGame['wins'];
+            message = 'You won!';
+            messageColor = 'green';
+            winSound.play();
+        } else if(winner === DEALER) {
+            document.querySelector('#losses').textContent = blackJackGame['losses'];
+            message = "You lost!";
+            messageColor = 'red';
+            lossSound.play();
+        } else {
+            document.querySelector('#draws').textContent = blackJackGame['draws'];
+            message = "You drew!";
+            messageColor = 'black';
+        }
+        document.querySelector('#blackjack-result').textContent = message;
+        document.querySelector('#blackjack-result').style.color = messageColor;
+        }
+    }
+//7:08:00
